@@ -217,24 +217,26 @@ def test():
         reFstack.append(result[10,:,:])
         #pg.image(result)
       
-    trialData1=[]
-    backgroundData1=[]
-    for jj in range(len(reFstack)):
-        x=reFstack[jj]
-        td=np.average(x[52:55,46:49])
-        bd=np.average(x[10:30,10:30])
-        trialData1.append(td)
-        backgroundData1.append(bd)   
+    # auto find pixels containing signal    
+    reFstackA=np.array(reFstack)
+    varImage = np.var(reFstackA,axis=-0)
+    plt.imshow(varImage)
+    signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.9)))
+    trialData = np.average(reFstackA[:,signalPixels[0],signalPixels[1]], axis=1)    
+       
+    backgroundData=np.average(reFstackA[:,10:30,10:30],axis=1)
+    backgroundData=np.average(backgroundData,axis=1)
+
         
         
     #stack1 = tifffile.imread(r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190605\slice1\Cell2\ZSTCK\NOMLA_NOPIP_1x1_f_2-8_660nm_200mA_2\slice45.tif')
         
     #darkstack
-    stack = tifffile.imread(r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190605\slice1\Cell2\ACT-MLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM-DARK_1\ACT-MLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM-DARK_1_MMStack_Pos0.ome.tif')
+    stackDark = tifffile.imread(cwd + r'\MLA2_1x1_50ms_150pA_A-STIM_DARK_1\MLA2_1x1_50ms_150pA_A-STIM_DARK_1_MMStack_Pos0.ome.tif')
         
     reStackDark = []
     for ii in range(len(stack)):
-        im = stack[ii,...] 
+        im = stackDark[ii,...] 
         print('Stack loaded...',ii)    
         result = get_refocussed(im,r,center,np.arange(-10,10,1),n_views = 19)
         print('Refocussed.')
