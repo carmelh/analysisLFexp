@@ -22,7 +22,6 @@ import pandas as pd
 import csv
 import os
 
-
 # This code was designed to read in the data seleceted for stats analyis.
 # we want to report the average and range of: dF/F, SNR, baseline
 # we want these to be in counts.
@@ -85,9 +84,8 @@ def getStimIndices(stimFrequency):
     
 
 def getStimArtefacts(darkTrial, stimIndices):
-    
     # This looks at the max value of when the stim is on +/- 1 frame, and uses this to minus off the real data
-    
+
     artefactMagnitude = []
     
     for index in stimIndices:
@@ -98,7 +96,37 @@ def getStimArtefacts(darkTrial, stimIndices):
 
 
 
-def processRawTrace(trialData, trialArtefacts, stimIndices, darkTrial, backgroundTrace, baselineIdx):
+def processRawTrace(trialData, darkTrial, backgroundTrace, baselineIdx):
+    # Calculate the baseline Fluorescence at the beginning of each trace. 
+    # Important: this doesn't take in to account photobleaching of the dye. 
+    # The first xx frames are before any photostim
+    
+    baselineFluorescence = np.mean(trialData[0:baselineIdx])
+    baselineBackgroundFluorescence = np.mean(backgroundTrace[0:baselineIdx])
+    
+    # calculate the average number of counts for the dark trial. This is to get the f_dark value for the dF/F calculation
+    darkTrialAverage = np.mean(darkTrial)
+    
+    # Initialise the container for the processed traces
+    processedTrace = []
+    processedBackgroundTrace = []
+    diff = []
+    
+    # now calc the following: (f-f0)/(f0-fdark)    
+    for element in trialData:
+        processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
+        
+    # now calc the background trace: (f-f0)/(f0-fdark)    
+    for element in backgroundTrace:
+        processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
+        
+    diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
+    
+    return processedTrace, diff, processedBackgroundTrace
+
+ 
+
+def processRawTraceStimArtefacts(trialData, trialArtefacts, stimIndices, darkTrial, backgroundTrace, baselineIdx):
     # Calculate the baseline Fluorescence at the beginning of each trace. 
     # Important: this doesn't take in to account photobleaching of the dye. 
     # The first xx frames are before any photostim
@@ -129,8 +157,6 @@ def processRawTrace(trialData, trialArtefacts, stimIndices, darkTrial, backgroun
     diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
     
     return processedTrace, trialData, diff, processedBackgroundTrace
-
- 
 
 #def bleachCorrection(rawTrace, stimTimes):
 
@@ -168,223 +194,79 @@ def plotData(ts, processedTrace):
 
     
     
-def addStatistics(processedTrace, rawTrace, trialArtefacts, stimIndices):
+def getStatistics(processedTrace, trialData, darkTrialData, baselineIdx):    
+    baseline = np.mean(trialData[0:baselineIdx])
+    baseline_photons = baseline*100*2**16/30000
+    baselineNoise = np.sqrt(np.var(trialData[0:baselineIdx]))
+        
+    maxValue = max(trialData[12:30])
+    peakIdx = np.array(np.where(trialData == maxValue))
+    peakSignal = np.mean(trialData[peakIdx[0,0]-2:peakIdx[0,0]+2])
+    peakSignal_photons = peakSignal*100*2**16/30000
     
-    # This takes in a processes and raw trace to calculate the SNR, peak dF/F (for the first stim), and baseline)
+    peak_dF_F = (processedTrace[peakIdx[0,0]])*100 #in %
     
-    # First remove the stimArtefacts from the raw trace
+    df_noise = (np.sqrt(np.var(processedTrace[0:baselineIdx])))*100 # in %
+    
+    SNR = (peak_dF_F)/df_noise
+    
+    baselineDarkNoise = np.sqrt(np.var(darkTrialData))
 
-    for index, artefact in enumerate(trialArtefacts):
-        rawTrace[int(stimIndices[index])] = rawTrace
-        
-    print('1')
-        
-    # get baseline for the particular trial
-    baseline = np.mean(rawTrace[0:11])
-    baselineNoise = np.sqrt(np.var(rawTrace[0:11]))
-    print('2')
-    # get index for the peak of the first Ca event. We look 6 frames (indices) after the stim index as this is the time taken to peak signal
-    maxValue = max(rawTrace[12:30])
-    peakIndex = rawTrace.index(maxValue)
-    print('3')
-    # we take the average at the peak to account for noise. at 100Hz, if we take too many frames in to teh average we risk diluting the peak signal.
-    # hence, I chose to just take the average across +-2frames from the peak index.
-    peakSignal = np.mean(rawTrace[peakIndex-2:peakIndex+2])
-    print('4')
-    
-    # Note: this is reported in %.
-    peak_dF_F = processedTrace[peakIndex]
-    #container_dF_F.append(peak_dF_F)
-    print('5')
-    
-    # Note: these are in average counts over the ROI
-    #container_baseline.append(baseline)
-    #container_SNR.append(peakSignal/baselineNoise)
-    SNR = peakSignal/baselineNoise
-    print('5')
-    
-    #for artefact in stimArtefacts:
-    #    container_artefacts.append(artefact)
+    #get bleach rate
+    total_bleach = np.mean(trialData[:10])-np.mean(trialData[-10:])
+    bleach_df_percent_per_sec = -100*((total_bleach)/(baseline - np.mean(darkTrialData)))*(100/len(trialData))
 
-    print('6')
+  #  container_peak_signal.append(peakSignal-baseline)
+
+    return baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_dF_F, df_noise, SNR, baselineDarkNoise, bleach_df_percent_per_sec
+
+   
     
-    return peak_dF_F, baseline, SNR
+
     
+
     
+    #stimArtefacts = [0,0]
+    #stimIndices = [0,1]
     
+    #baselineIdx = 11
     
-    #-------------------------#
-    #          Main           #
-    #-------------------------#
-        
-    xD=[]
-    darkTrialData=[]
-    with open(r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190605\slice1\Cell2\NOMLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM-NOLGHT_1\NOMLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM-DARK_1_MMStack_Pos0.ome.csv', newline='') as csvfile:
-        file= csv.reader(csvfile, delimiter=',')
-        for row in file:
-            xD.append(float(row[0]))
-            darkTrialData.append(float(row[1]))
-    
-    x=[]
-    trialData=[]
-    with open(r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190605\slice1\Cell2\NOMLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM_1\NOMLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM_1_MMStack_Pos0.ome.csv', newline='') as csvfile:
-        file= csv.reader(csvfile, delimiter=',')
-        for row in file:
-            x.append(float(row[0]))
-            trialData.append(float(row[1]))
-            
-    xB=[]
-    backgroundData=[]
-    with open(r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190605\slice1\Cell2\NOMLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM_1\NOMLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM_1_MMStack_Pos0-BG.ome.csv', newline='') as csvfile:
-        file= csv.reader(csvfile, delimiter=',')
-        for row in file:
-            xB.append(float(row[0]))
-            backgroundData.append(float(row[1]))
-    
-    stimArtefacts = [0,0]
-    stimIndices = [0,1]
-    
-    baselineIdx = 11
-    
-    processedTrace, stimCorrectedTrial, diffROI,processedBackgroundTrace = processRawTrace(trialData, stimArtefacts, stimIndices, darkTrialData, backgroundData, baselineIdx)
+    #processedTrace, diffROI,processedBackgroundTrace = processRawTrace(trialData, darkTrialData, backgroundData, baselineIdx)
+    #processedTrace, stimCorrectedTrial, diffROI,processedBackgroundTrace = processRawTraceStimArtefacts(trialData, stimArtefacts, stimIndices, darkTrialData, backgroundData, baselineIdx)
     
     # Now use the processed dF/F trace and raw trace to get the stats we need
     # get baseline for the particular trial
-    baseline = np.mean(stimCorrectedTrial[0:baselineIdx])
-    baselineNoise = np.sqrt(np.var(stimCorrectedTrial[0:baselineIdx]))
-        
-    # get index for the peak of the first Ca event. We look 7 frames (indices) after the stim index as this is the time taken to peak signal
-        
-    maxValue = max(stimCorrectedTrial[12:30])
-    peakIndex = stimCorrectedTrial.index(maxValue)
-    peakSignal = np.mean(stimCorrectedTrial[peakIndex-2:peakIndex+2])
-    
-    # Note: this is reported in %.
-    peak_dF_F = processedTrace[peakIndex]
-    container_dF_F.append(peak_dF_F)
-    df_noise = np.sqrt(np.var(processedTrace[0:baselineIdx]))
-    container_dF_F_noise.append(df_noise)
-    
-    # Note: these are reported in counts
-    SNR = (peak_dF_F)/df_noise
-    container_SNR.append(SNR)
-    container_baseline.append(baseline)
-    container_BN.append(baselineNoise)
-    
-    baselineDarkNoise = np.sqrt(np.var(darkTrialData))
-    container_DarkNoise.append(baselineDarkNoise)
-    
-    container_signalToArtefactRatio.append(peakSignal-baseline)
     
     
-    #plt.plot(trialData)
-    #plt.show()
-    #get bleach rate
-    total_bleach = np.mean(trialData[:10])-np.mean(trialData[-10:])
-    
-    bleach_df_percent_per_sec = -100*((total_bleach)/(baseline - np.mean(darkTrialData)))*(100/len(trialData))
-    
-    container_bleach_rate.append(bleach_df_percent_per_sec)
-    container_peak_signal.append(peakSignal-baseline)
-    
-    processedData[index].append(trial)
-    processedData[index].append(peak_dF_F)
-    processedData[index].append(SNR)
-    processedData[index].append(baselineNoise)
-    processedData[index].append(baseline)
-    processedData[index].append(max(stimCorrectedTrial[0:80])-min(stimCorrectedTrial[0:80]))
-    
-    processedData.append(trial)
-    processedData.append(peak_dF_F)
-    processedData.append(SNR)
-    processedData.append(baselineNoise)
-    processedData.append(baseline)
-    processedData.append(max(stimCorrectedTrial[0:baselineIdx])-min(stimCorrectedTrial[0:baselineIdx]))
-        
-    container_bleach_rate = np.array(container_bleach_rate)
-    print('bleach in %')
-    print(np.median(container_bleach_rate[container_bleach_rate<0]))
-    print(np.percentile(container_bleach_rate[container_bleach_rate<0],90))
-    print(np.percentile(container_bleach_rate[container_bleach_rate<0],10))
-    
-    container_bleach_rate = np.array(container_dF_F)*100
-    print('peak signal %')
-    print(np.median(container_bleach_rate))
-    print(np.percentile(container_bleach_rate,90))
-    print(np.percentile(container_bleach_rate,10))
-    
-    container_bleach_rate = np.array(container_dF_F_noise)*100
-    print('noise %')
-    print(np.median(container_bleach_rate))
-    print(np.percentile(container_bleach_rate,90))
-    print(np.percentile(container_bleach_rate,10))
-    
-    container_bleach_rate = np.array(container_artefacts)
-    print('artefacts (counts)')
-    print(np.median(container_bleach_rate))
-    print(np.percentile(container_bleach_rate,90))
-    print(np.percentile(container_bleach_rate,10))
-    
-    #get percent of baseline noise for container artefacts
-    container_artefacts = np.array(container_artefacts)
-    test = container_artefacts[container_artefacts>10]
-    print(np.median(test)/np.median([s[3] for s in processedData[-9:]]))
-    
-    
-    all_snrs = [s[2] for s in processedData]
-    snr_mean = np.median(all_snrs)
-    snr_max = np.percentile(all_snrs,90)
-    snr_min = np.percentile(all_snrs,10)
-    print('SNR')
-    print(snr_mean,snr_min,snr_max)
-    
-    
-    all_snrs =  [s[3] for s in processedData]
-    snr_mean = np.median(all_snrs)
-    snr_max = np.percentile(all_snrs,90)
-    snr_min = np.percentile(all_snrs,10)
-    print('noise')
-    print(snr_mean,snr_min,snr_max)    
-    
-    all_snrs =  [s[4] for s in processedData]
-    snr_mean = np.median(all_snrs)*100*2**16/30000
-    snr_max = np.percentile(all_snrs,90)*100*2**16/30000
-    snr_min = np.percentile(all_snrs,10)*100*2**16/30000
-    print('baseline')
-    print(snr_mean,snr_min,snr_max)    
-    
-    
-    
-    #-----------------------------#
-    
-    plt.plot(time,processedTrace,linewidth=3.0,color='k')
-    plotData(ts, processedTrace)
 
-    font = {'family': 'sans',
-            'weight': 'normal',
-            'size': 16,
-            }
-    
-    plt.rc('font',**font)
-
-    time = np.arange(0, ts*len(processedTrace), ts)
-
-    fig = plt.gcf()      
-    ax = plt.subplot(111)  
-    plt.plot(time[0:140],processedTrace[0:140],linewidth=3.0,color='k')
-    plt.plot([7,7],[0.1,0.2],linewidth=4.0,color='k')
-    plt.plot([7,9],[0.1,0.1],linewidth=4.0,color='k')
-    #plt.legend(legend, loc='upper right', frameon=False, bbox_to_anchor=(1,1.0))
-    fig.set_size_inches(8,4)
-    
-    #axis formatting
-    #ax.spines['left'].set_visible(2)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_linewidth(False)
-    ax.spines['left'].set_linewidth(False)
-    ax.axes.get_yaxis().set_ticks([])
-    ax.axes.get_xaxis().set_ticks([])
-    plt.savefig(cwd + '\MLAtimeSeries_refocussed.eps', format='eps', dpi=1000)
+#    plt.plot(time,processedTrace,linewidth=3.0,color='k')
+#    plotData(ts, processedTrace)
+#
+#    font = {'family': 'sans',
+#            'weight': 'normal',
+#            'size': 16,
+#            }
+#    
+#    plt.rc('font',**font)
+#
+#    time = np.arange(0, ts*len(processedTrace), ts)save 
+#
+#    fig = plt.gcf()      
+#    ax = plt.subplot(111)  
+#    plt.plot(time[0:140],processedTrace[0:140],linewidth=3.0,color='k')
+#    plt.plot([7,7],[0.1,0.2],linewidth=4.0,color='k')
+#    plt.plot([7,9],[0.1,0.1],linewidth=4.0,color='k')
+#    #plt.legend(legend, loc='upper right', frameon=False, bbox_to_anchor=(1,1.0))
+#    fig.set_size_inches(8,4)
+#    
+#    #axis formatting
+#    #ax.spines['left'].set_visible(2)
+#    ax.spines['right'].set_visible(False)
+#    ax.spines['top'].set_visible(False)
+#    ax.spines['bottom'].set_linewidth(False)
+#    ax.spines['left'].set_linewidth(False)
+#    ax.axes.get_yaxis().set_ticks([])
+#    ax.axes.get_xaxis().set_ticks([])
+#    plt.savefig(cwd + '\MLAtimeSeries_refocussed.eps', format='eps', dpi=1000)
     
     
