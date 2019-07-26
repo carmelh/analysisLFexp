@@ -13,7 +13,7 @@ import numpy as np
 import pickle
 
 
-def getDeconvolution(stack,stackDark,r,center,path):
+def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
 
     sum_ = np.sum(stack[0,:,:])
     
@@ -43,8 +43,12 @@ def getDeconvolution(stack,stackDark,r,center,path):
         pickle.dump(decStackA, f)    
         
     varImage = np.var(decStackA,axis=-0)
-    signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.92)))
-    trialData = np.average(decStackA[:,signalPixels[0],signalPixels[1]], axis=1)    
+   # signalPixels = load from refocus for some reason....    
+    
+    #trialData = np.average(decStackA[:,52:55,46:49], axis=1)   
+    trialData = np.average(reFstackA[:,signalPixels[0],signalPixels[1]], axis=1)    
+
+    #trialData = np.average(trialData,axis=1)    
 
     with open(path + '\\deconvolvedTrialData_infocus', 'wb') as f:
         pickle.dump(trialData, f) 

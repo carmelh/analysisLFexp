@@ -53,6 +53,16 @@ def getStimIndices(stimFrequency):
     
     
 
+def getBaseLineIdx(stim):
+    if stim == 'A Stim':
+        return 13
+    elif stim == 'M Stim':
+        return 13
+    elif stim == 'R Stim':
+        return 80
+
+
+
 def getStimArtefacts(darkTrial, stimIndices):
     # This looks at the max value of when the stim is on +/- 1 frame, and uses this to minus off the real data
 
@@ -66,11 +76,11 @@ def getStimArtefacts(darkTrial, stimIndices):
 
 
 
-def processRawTrace(trialData, darkTrial, backgroundTrace, baselineIdx):
+def processRawTrace(trialData, darkTrial, backgroundTrace, stim):
     # Calculate the baseline Fluorescence at the beginning of each trace. 
     # Important: this doesn't take in to account photobleaching of the dye. 
     # The first xx frames are before any photostim
-    
+    baselineIdx = getBaseLineIdx(stim)
     baselineFluorescence = np.mean(trialData[0:baselineIdx])
     baselineBackgroundFluorescence = np.mean(backgroundTrace[0:baselineIdx])
     
@@ -92,7 +102,7 @@ def processRawTrace(trialData, darkTrial, backgroundTrace, baselineIdx):
         
     diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
     
-    return processedTrace, diff, processedBackgroundTrace
+    return processedTrace, diff, processedBackgroundTrace, baselineIdx
 
  
 
@@ -126,7 +136,7 @@ def processRawTraceStimArtefacts(trialData, trialArtefacts, stimIndices, darkTri
         
     diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
     
-    return processedTrace, trialData, diff, processedBackgroundTrace
+    return processedTrace, trialData, diff, processedBackgroundTrace, baselineIdx
 
     
 def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):    

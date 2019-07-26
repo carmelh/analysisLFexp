@@ -211,9 +211,6 @@ def main(stack,stackDark,r,center,path):
         print('Refocussed.')
         reFstack.append(result[10,:,:])
         #pg.image(result)
-      
-   #with open(cwd + 'reFstack', 'rb') as f:
-    #    reFstackA = pickle.load(f)
         
     # auto find pixels containing signal    
     reFstackA=np.array(reFstack)
@@ -253,7 +250,7 @@ def main(stack,stackDark,r,center,path):
         d=np.average(x[60:63,42:44])
         darkTrialData.append(d)
         
-    return trialData, varImage, backgroundData, darkTrialData
+    return trialData, varImage, backgroundData, darkTrialData, signalPixels
 
 
 #def test():

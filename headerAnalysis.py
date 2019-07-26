@@ -23,40 +23,57 @@ import idx_refocus as ref
 import deconvolveLF as dlf
 sys.path.insert(1, r'H:\Python_Scripts\carmel_functions')
 import plotting_functions as pf
+import pandas as pd
 
-r,center = (np.array([0.87,19.505]),np.array([1024.3,1015.4])) 
+
+
+###############################################
+################### INPUTS  ###################
+###############################################
 
 cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190724'
-sliceNo = r'\slice1'
-cellNo = r'\cell1'
-fileName = r'\MLA3_1x1_50ms_150pA_A-STIM_1_MMStack_Pos0.ome.tif'
-trialFolder = r'\MLA3_1x1_50ms_150pA_A-STIM_1'
-path = cwd + sliceNo + cellNo + trialFolder
+currentFile = 'MLA3_1x1_50ms_150pA_A-STIM_1' 
 
 fileNameDark = r'\MLA2_1x1_50ms_150pA_A-STIM_DARK_1\MLA2_1x1_50ms_150pA_A-STIM_DARK_1_MMStack_Pos0.ome.tif'
+
+#fileName = r'\MLA3_1x1_50ms_150pA_A-STIM_1_MMStack_Pos0.ome.tif'
+
+###############################################
+################### setup ###################
+###############################################
+
+data_summary = pd.ExcelFile(cwd+r'\result_summary.xlsx')
+df = data_summary.parse('Sheet1')    
+
+sliceNo = r'\slice{}'.format(df.at[currentFile, 'slice'])
+cellNo = r'\cell{}'.format(df.at[currentFile, 'cell'])
+
+stim = df.at[currentFile, 'Stim Prot']
+ts=df.at[currentFile, 'Exp Time']
+fs=1/ts 
+
+r,center = (np.array([df.at[currentFile, 'Rdy'],df.at[currentFile, 'Rdx']]),np.array([df.at[currentFile, 'y'],df.at[currentFile, 'x']])) 
+
+fileName = r'\{}_MMStack_Pos0.ome.tif'.format(currentFile)
+trialFolder = r'\{}'.format(currentFile)
+path = cwd + sliceNo + cellNo + trialFolder
 
 stack = tifffile.imread(path + fileName)
 stackDark = tifffile.imread(cwd + sliceNo + cellNo + fileNameDark)
 
-Stim = 'A Stim'
-fs=20 
-ts=1/fs
 
-#    cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190724\slice1\cell1'
- #   stack = tifffile.imread(cwd + r'\MLA3_1x1_50ms_150pA_A-STIM_1\MLA3_1x1_50ms_150pA_A-STIM_1_MMStack_Pos0.ome.tif')
- 
 ###############################################
 ################### refocus ###################
 ###############################################
 keyword='refocussed'
 
-trialData, varImage, backgroundData, darkTrialData = ref.main(stack,stackDark,r,center,path)
+trialData, varImage, backgroundData, darkTrialData, signalPixels = ref.main(stack,stackDark,r,center,path)
 plt.imshow(varImage)
 
-baselineIdx = 11 # for A Stim
+#baselineIdx = 11 # for A Stim
 
 # process trace
-processedTrace, diffROI,processedBackgroundTrace = ia.processRawTrace(trialData, darkTrialData, backgroundData, baselineIdx)
+processedTrace, diffROI,processedBackgroundTrace,baselineIdx = ia.processRawTrace(trialData, darkTrialData, backgroundData, stim)
 print('Finished Processing')
 
 # get stats
@@ -64,7 +81,7 @@ baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_
 
 # save to excel
 #fields=['slice num', 'cell num', 'fileName','Stim','SNR','baseline', 'baseline photons', 'baseline noise', 'peak signal', 'pk photons', 'peak dF/F', 'df noise', 'bleach', 'Dark filename', 'baseline dark noise']
-fields=[sliceNo, cellNo, fileName,Stim,SNR,baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_dF_F, df_noise, bleach, fileNameDark, baselineDarkNoise]
+fields=[currentFile,df.at[currentFile, 'slice'], df.at[currentFile, 'cell'],stim,SNR,baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_dF_F, df_noise, bleach, fileNameDark, baselineDarkNoise]
 with open(cwd + sliceNo + r'\stats_refocussed.csv', 'a', newline='') as f:
     writer = csv.writer(f, lineterminator='\r')
     writer.writerow(fields)
@@ -80,18 +97,18 @@ yS=0.005
 yE=yS+0.005
 pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
 
-
+df.at[currentFile, 'Refoc'] = 1
 
 ##################################################
 ################### Deconvolve ###################
 ##################################################
 keyword = 'deconvolved'
 
-trialData, varImage, backgroundData, darkTrialData = dlf.getDeconvolution(stack,stackDark,path)
+trialData, varImage, backgroundData, darkTrialData = dlf.getDeconvolution(stack,stackDark,path,signalPixels)
 plt.imshow(varImage)
 
 # process trace
-processedTrace, diffROI,processedBackgroundTrace = ia.processRawTrace(trialData, darkTrialData, backgroundData, baselineIdx)
+processedTrace, diffROI,processedBackgroundTrace,baselineIdx = ia.processRawTrace(trialData, darkTrialData, backgroundData, stim)
 print('Finished Processing')
 
 # get stats
@@ -99,8 +116,20 @@ baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_
 
 # save to excel
 #fields=['slice num', 'cell num', 'fileName','Stim','SNR','baseline', 'baseline photons', 'baseline noise', 'peak signal', 'pk photons', 'peak dF/F', 'df noise', 'bleach', 'Dark filename', 'baseline dark noise']
-fields=[sliceNo, cellNo, fileName,Stim,SNR,baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_dF_F, df_noise, bleach, fileNameDark, baselineDarkNoise]
+fields=[currentFile,df.at[currentFile, 'slice'], df.at[currentFile, 'cell'],stim,SNR,baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_dF_F, df_noise, bleach, fileNameDark, baselineDarkNoise]
 with open(cwd + sliceNo + r'\stats_deconvolved.csv', 'a', newline='') as f:
     writer = csv.writer(f, lineterminator='\r')
     writer.writerow(fields)
 print('Saved Stats')
+
+
+# first plot to figure out length and location of scale bars
+plt.plot()
+
+xS=7
+xE=xS+2
+yS=0.005
+yE=yS+0.005
+pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
+
+df.at[currentFile, 'Decon'] = 1
