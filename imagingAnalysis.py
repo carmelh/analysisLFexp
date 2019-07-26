@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 13 10:30:41 2019
-
-@author: chowe7
-"""
-
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Sun Jul  1 19:14:20 2018
 
 @author: jeevan
-@edited: Carmel
+@heavily edited: Carmel
 """
 
 import numpy as np
@@ -27,17 +20,7 @@ import os
 # we want these to be in counts.
 
 
-#--------------------------------------------------------------------------------#
-#          create containers for processed Data           #
-#--------------------------------------------------------------------------------#
-
-cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190605\slice1\Cell2\ACT-MLA_1x1_f_2-8_50ms_660nm_200mA-ASTIM_4'
-
-fs=20
-ts=1/fs
-
 # This section creates the relevent LED-on markers to plot on the data
-
 # Imaging at 100Hz 
 stimIndices_0_5Hz = [89,289,489]
 stimIndices_1_0Hz = [89,189,289]
@@ -46,19 +29,6 @@ stimIndices_5_0Hz = [89,109,129]
 stimIndices_10_0Hz = [89,99,109]
 stimIndices_15_0Hz = [89,96,103]
 stimIndices_20_0Hz = [89,94,99]
-
-container_dF_F = []
-container_SNR = []
-container_baseline = []
-container_artefacts = []
-container_BN = []
-container_DarkNoise = []
-container_signalToArtefactRatio = []
-container_bleach_rate = []
-container_peak_signal = []
-container_dF_F_noise = []
-#processedData = [[] for i in range(len(extractedTrialsList))]
-processedData = [] 
 
 #------------------------------#
 #          Functions           #
@@ -112,11 +82,11 @@ def processRawTrace(trialData, darkTrial, backgroundTrace, baselineIdx):
     processedBackgroundTrace = []
     diff = []
     
-    # now calc the following: (f-f0)/(f0-fdark)    
+    # now calc (f-f0)/(f0-fdark)      
     for element in trialData:
         processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
         
-    # now calc the background trace: (f-f0)/(f0-fdark)    
+    # now calc (f-f0)/(f0-fdark) for background trace    
     for element in backgroundTrace:
         processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
         
@@ -146,11 +116,11 @@ def processRawTraceStimArtefacts(trialData, trialArtefacts, stimIndices, darkTri
     processedBackgroundTrace = []
     diff = []
     
-    # now calc the following: (f-f0)/(f0-fdark)    
+    # now calc (f-f0)/(f0-fdark)    
     for element in trialData:
         processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
         
-    # now calc the background trace: (f-f0)/(f0-fdark)    
+    # now calc (f-f0)/(f0-fdark) for background trace   
     for element in backgroundTrace:
         processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
         
@@ -158,41 +128,6 @@ def processRawTraceStimArtefacts(trialData, trialArtefacts, stimIndices, darkTri
     
     return processedTrace, trialData, diff, processedBackgroundTrace
 
-#def bleachCorrection(rawTrace, stimTimes):
-
-
-
-def plotData(ts, processedTrace):
-    font = {'family': 'sans',
-            'weight': 'normal',
-            'size': 16,
-            }
-    
-    plt.rc('font',**font)
-
-    time = np.arange(0, ts*len(processedTrace), ts)
-
-    fig = plt.gcf()      
-    ax = plt.subplot(111)  
-    plt.plot(time,processedTrace,linewidth=3.0,color='k')
-    plt.plot([7,7],[0.005,0.01],linewidth=4.0,color='k')
-    plt.plot([7,9],[0.005,0.005],linewidth=4.0,color='k')
-    #plt.legend(legend, loc='upper right', frameon=False, bbox_to_anchor=(1,1.0))
-    fig.set_size_inches(8,4)
-    
-    #axis formatting
-    #ax.spines['left'].set_visible(2)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_linewidth(False)
-    ax.spines['left'].set_linewidth(False)
-    ax.axes.get_yaxis().set_ticks([])
-    ax.axes.get_xaxis().set_ticks([])
-    plt.savefig(cwd + r'MLAtimeSeries.eps', format='eps', dpi=1000)
-    
-    return
-
-    
     
 def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):    
     baseline = np.mean(trialData[0:baselineIdx])
@@ -223,50 +158,4 @@ def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):
    
     
 
-    
-
-    
-    #stimArtefacts = [0,0]
-    #stimIndices = [0,1]
-    
-    #baselineIdx = 11
-    
-    #processedTrace, diffROI,processedBackgroundTrace = processRawTrace(trialData, darkTrialData, backgroundData, baselineIdx)
-    #processedTrace, stimCorrectedTrial, diffROI,processedBackgroundTrace = processRawTraceStimArtefacts(trialData, stimArtefacts, stimIndices, darkTrialData, backgroundData, baselineIdx)
-    
-    # Now use the processed dF/F trace and raw trace to get the stats we need
-    # get baseline for the particular trial
-    
-    
-
-#    plt.plot(time,processedTrace,linewidth=3.0,color='k')
-#    plotData(ts, processedTrace)
-#
-#    font = {'family': 'sans',
-#            'weight': 'normal',
-#            'size': 16,
-#            }
-#    
-#    plt.rc('font',**font)
-#
-#    time = np.arange(0, ts*len(processedTrace), ts)save 
-#
-#    fig = plt.gcf()      
-#    ax = plt.subplot(111)  
-#    plt.plot(time[0:140],processedTrace[0:140],linewidth=3.0,color='k')
-#    plt.plot([7,7],[0.1,0.2],linewidth=4.0,color='k')
-#    plt.plot([7,9],[0.1,0.1],linewidth=4.0,color='k')
-#    #plt.legend(legend, loc='upper right', frameon=False, bbox_to_anchor=(1,1.0))
-#    fig.set_size_inches(8,4)
-#    
-#    #axis formatting
-#    #ax.spines['left'].set_visible(2)
-#    ax.spines['right'].set_visible(False)
-#    ax.spines['top'].set_visible(False)
-#    ax.spines['bottom'].set_linewidth(False)
-#    ax.spines['left'].set_linewidth(False)
-#    ax.axes.get_yaxis().set_ticks([])
-#    ax.axes.get_xaxis().set_ticks([])
-#    plt.savefig(cwd + '\MLAtimeSeries_refocussed.eps', format='eps', dpi=1000)
-    
     

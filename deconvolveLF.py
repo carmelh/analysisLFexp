@@ -56,9 +56,9 @@ def getDeconvolution(stack,stackDark,r,center,path):
         pickle.dump(backgroundData, f)     
         
         
-    # Dark trial    
-   decStackDark = []
-   for ii in range(len(stackDark)):
+    # Dark trial  
+    decStackDark = []
+    for ii in range(len(stackDark)):
         im = stackDark[ii,...]
         print('Stack loaded...', ii)    
         rectified = de.rectify_image(im,r,center,new_center,Nnum)
@@ -66,7 +66,7 @@ def getDeconvolution(stack,stackDark,r,center,path):
         result_is = de.ISRA(start_guess,rectified/sum_,H,num_iterations,locs)
         print('Deconvolved.')
         decStackDark.append(result_is[10,:,:])
-     
+        
     with open(path + '\\deconvolvedDarkData_infocus', 'wb') as f:
         pickle.dump(decStackDark, f) 
                    
