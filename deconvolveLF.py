@@ -46,7 +46,7 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
    # signalPixels = load from refocus for some reason....    
     
     #trialData = np.average(decStackA[:,52:55,46:49], axis=1)   
-    trialData = np.average(reFstackA[:,signalPixels[0],signalPixels[1]], axis=1)    
+    trialData = np.average(decStackA[:,signalPixels[0],signalPixels[1]], axis=1)    
 
     #trialData = np.average(trialData,axis=1)    
 
@@ -56,7 +56,7 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
     backgroundData=np.average(decStackA[:,10:30,10:30],axis=1)
     backgroundData=np.average(backgroundData,axis=1)
     
-    with open(path + '\\refocussedBackgroundData_infocus', 'wb') as f:
+    with open(path + '\\deconvolvedBackgroundData_infocus', 'wb') as f:
         pickle.dump(backgroundData, f)     
         
         

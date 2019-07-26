@@ -4,10 +4,7 @@ Created on Fri Jul 26 12:46:28 2019
 
 @author: chowe7
 """
-# to do:
-#   get MLA locations from excel
-#   get filenames from excel
-#   get stim and freq from excel
+# to do:LED power, skip dark image sometimes, timer on 
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,7 +29,7 @@ import pandas as pd
 ###############################################
 
 cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190724'
-currentFile = 'MLA3_1x1_50ms_150pA_A-STIM_1' 
+currentFile = 'MLA2_1x1_50ms_150pA_A-STIM_4' 
 
 fileNameDark = r'\MLA2_1x1_50ms_150pA_A-STIM_DARK_1\MLA2_1x1_50ms_150pA_A-STIM_DARK_1_MMStack_Pos0.ome.tif'
 
@@ -89,13 +86,13 @@ print('Saved Stats')
 
 
 # first plot to figure out length and location of scale bars
-plt.plot()
-
-xS=7
-xE=xS+2
-yS=0.005
-yE=yS+0.005
-pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
+#plt.plot()
+#
+#xS=7
+#xE=xS+2
+#yS=0.005
+#yE=yS+0.005
+#pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
 
 df.at[currentFile, 'Refoc'] = 1
 
@@ -124,12 +121,12 @@ print('Saved Stats')
 
 
 # first plot to figure out length and location of scale bars
-plt.plot()
-
-xS=7
-xE=xS+2
-yS=0.005
-yE=yS+0.005
-pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
+#plt.plot()
+#
+#xS=7
+#xE=xS+2
+#yS=0.005
+#yE=yS+0.005
+#pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
 
 df.at[currentFile, 'Decon'] = 1
