@@ -194,7 +194,7 @@ def plotData(ts, processedTrace):
 
     
     
-def getStatistics(processedTrace, trialData, darkTrialData, baselineIdx):    
+def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):    
     baseline = np.mean(trialData[0:baselineIdx])
     baseline_photons = baseline*100*2**16/30000
     baselineNoise = np.sqrt(np.var(trialData[0:baselineIdx]))
@@ -217,7 +217,7 @@ def getStatistics(processedTrace, trialData, darkTrialData, baselineIdx):
     bleach_df_percent_per_sec = -100*((total_bleach)/(baseline - np.mean(darkTrialData)))*(100/len(trialData))
 
   #  container_peak_signal.append(peakSignal-baseline)
-
+    
     return baseline, baseline_photons, baselineNoise, peakSignal, peakSignal_photons, peak_dF_F, df_noise, SNR, baselineDarkNoise, bleach_df_percent_per_sec
 
    
