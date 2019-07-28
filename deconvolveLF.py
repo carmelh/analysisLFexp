@@ -11,6 +11,7 @@ sys.path.insert(1, r'\\icnas4.cc.ic.ac.uk\chowe7\GitHub\lightfield_HPC_processin
 import deconvolve as de
 import numpy as np
 import pickle
+import time
 
 
 def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
@@ -30,6 +31,7 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
     #multiple images
     decStack = []
     for ii in range(len(stack)):
+        start=time.time()
         lightfield_image = stack[ii,...]
         print('Stack loaded...', ii)    
         rectified = de.rectify_image(lightfield_image,r,center,new_center,Nnum)
@@ -37,6 +39,9 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
         result_is = de.ISRA(start_guess,rectified/sum_,H,num_iterations,locs)
         print('Deconvolved.')
         decStack.append(result_is[10,:,:])
+        end =time.time()
+        elapsedTime = end-start
+        print('elapsed time = {}'.format(elapsedTime))
         
     decStackA=np.array(decStack)    
     with open(path + '\\deconvolvedStack_infocus', 'wb') as f:

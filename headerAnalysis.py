@@ -57,7 +57,7 @@ path = cwd + sliceNo + cellNo + trialFolder
 
 stack = tifffile.imread(path + fileName)
 stackDark = tifffile.imread(cwd + sliceNo + cellNo + fileNameDark)
-
+print('stacks loaded')
 
 ###############################################
 ################### refocus ###################
@@ -65,7 +65,7 @@ stackDark = tifffile.imread(cwd + sliceNo + cellNo + fileNameDark)
 keyword='refocussed'
 
 trialData, varImage, backgroundData, darkTrialData, signalPixels = ref.main(stack,stackDark,r,center,path)
-plt.imshow(varImage)
+#plt.imshow(varImage)
 
 #baselineIdx = 11 # for A Stim
 
@@ -95,13 +95,16 @@ print('Saved Stats')
 #pf.plotTimeData(ts,processedTrace,xS,xE,yS,yE,path,keyword)
 
 df.at[currentFile, 'Refoc'] = 1
+print('Finished Refocussing')
+
 
 ##################################################
 ################### Deconvolve ###################
 ##################################################
+print('Starting Deconvolution')
 keyword = 'deconvolved'
 
-trialData, varImage, backgroundData, darkTrialData = dlf.getDeconvolution(stack,stackDark,path,signalPixels)
+trialData, varImage, backgroundData, darkTrialData = dlf.getDeconvolution(stack,stackDark,r,center,path,signalPixels)
 plt.imshow(varImage)
 
 # process trace
