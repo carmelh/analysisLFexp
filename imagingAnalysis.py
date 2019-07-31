@@ -143,13 +143,18 @@ def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):
     baseline = np.mean(trialData[0:baselineIdx])
     baseline_photons = baseline*100*2**16/30000
     baselineNoise = np.sqrt(np.var(trialData[0:baselineIdx]))
-        
+    
     maxValue = max(trialData[12:30])
     peakIdx = np.array(np.where(trialData == maxValue))
     peakSignal = np.mean(trialData[peakIdx[0,0]-2:peakIdx[0,0]+2])
+    
+    #maxValue = max(trialData[12:30])
+    #peakIdx = trialData.index(maxValue)
+    #peakSignal = np.mean(trialData[peakIdx-2:peakIdx+2])
     peakSignal_photons = peakSignal*100*2**16/30000
     
     peak_dF_F = (processedTrace[peakIdx[0,0]])*100 #in %
+    #peak_dF_F = (processedTrace[peakIdx])*100 #in %
     
     df_noise = (np.sqrt(np.var(processedTrace[0:baselineIdx])))*100 # in %
     

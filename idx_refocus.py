@@ -13,7 +13,8 @@ import csv
 import sys
 sys.path.insert(1, r'H:\Python_Scripts\analysisLFexp')
 import imagingAnalysis as ia
-import pickle
+sys.path.insert(1, r'H:\Python_Scripts\carmel_functions')
+import general_functions as gf
 
 #a script to do the same as aperture 2 but interpolation inn the views space
 
@@ -214,24 +215,14 @@ def main(stack,stackDark,r,center,path):
         
     # auto find pixels containing signal    
     reFstackA=np.array(reFstack)
-    
-    #save
-    with open(path + '\\refstack_infocus', 'wb') as f:
-        pickle.dump(reFstackA, f)    
-
     varImage = np.var(reFstackA,axis=-0)
     signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.92)))
     trialData = np.average(reFstackA[:,signalPixels[0],signalPixels[1]], axis=1)    
-
-    with open(path + '\\refocussedTrialData_infocus', 'wb') as f:
-        pickle.dump(trialData, f) 
-        
+    
+    #average background    
     backgroundData=np.average(reFstackA[:,10:30,10:30],axis=1)
     backgroundData=np.average(backgroundData,axis=1)
     
-    with open(path + '\\refocussedBackgroundData_infocus', 'wb') as f:
-        pickle.dump(backgroundData, f)     
-        
     #darkstack        
     reStackDark = []
     for ii in range(len(stackDark)):
@@ -241,8 +232,6 @@ def main(stack,stackDark,r,center,path):
         print('Refocussed.')
         reStackDark.append(result[10,:,:])
         
-    with open(path + '\\darkRefStack_infocus', 'wb') as f:
-        pickle.dump(reStackDark, f) 
           
     darkTrialData=[]
     for jj in range(len(reStackDark)):
@@ -250,6 +239,12 @@ def main(stack,stackDark,r,center,path):
         d=np.average(x[60:63,42:44])
         darkTrialData.append(d)
         
+    #save
+    gf.savePickes(path,'\\refstack_infocus',reFstackA)       
+    gf.savePickes(path,'\\refocussedTrialData_infocus',trialData)    
+    gf.savePickes(path,'\\refocussedBackgroundData_infocus',backgroundData)    
+    gf.savePickes(path,'\\darkRefStack_infocus',reStackDark)    
+       
     return trialData, varImage, backgroundData, darkTrialData, signalPixels
 
 

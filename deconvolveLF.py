@@ -10,9 +10,9 @@ import sys
 sys.path.insert(1, r'\\icnas4.cc.ic.ac.uk\chowe7\GitHub\lightfield_HPC_processing')
 import deconvolve as de
 import numpy as np
-import pickle
 import time
-
+sys.path.insert(1, r'H:\Python_Scripts\carmel_functions')
+import general_functions as gf
 
 def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
 
@@ -43,27 +43,20 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
         elapsedTime = end-start
         print('elapsed time = {}'.format(elapsedTime))
         
-    decStackA=np.array(decStack)    
-    with open(path + '\\deconvolvedStack_infocus', 'wb') as f:
-        pickle.dump(decStackA, f)    
         
+    #find signal pixels average
+    decStackA=np.array(decStack)    
     varImage = np.var(decStackA,axis=-0)
-   # signalPixels = load from refocus for some reason....    
-    
-    #trialData = np.average(decStackA[:,52:55,46:49], axis=1)   
+   # signalPixels = need to load from refocus for some reason....    
     trialData = np.average(decStackA[:,signalPixels[0],signalPixels[1]], axis=1)    
-
+    
+    #trialData = np.average(decStackA[:,52:55,46:53], axis=1)   
     #trialData = np.average(trialData,axis=1)    
 
-    with open(path + '\\deconvolvedTrialData_infocus', 'wb') as f:
-        pickle.dump(trialData, f) 
-        
+    #background average
     backgroundData=np.average(decStackA[:,10:30,10:30],axis=1)
     backgroundData=np.average(backgroundData,axis=1)
     
-    with open(path + '\\deconvolvedBackgroundData_infocus', 'wb') as f:
-        pickle.dump(backgroundData, f)     
-        
         
     # Dark trial  
     decStackDark = []
@@ -76,8 +69,6 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
         print('Deconvolved.')
         decStackDark.append(result_is[10,:,:])
         
-    with open(path + '\\deconvolvedDarkData_infocus', 'wb') as f:
-        pickle.dump(decStackDark, f) 
                    
     darkTrialData=[]   
     for jj in range(len(decStackDark)):
@@ -85,7 +76,11 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
         d=np.average(x[10:40,10:20])
         darkTrialData.append(d)    
         
-    with open(path + '\\deconvolvedDarkTrialData_infocus', 'wb') as f:
-        pickle.dump(darkTrialData, f)        
+    #save
+    gf.savePickes(path,'\\deconvolvedStack_infocus',decStackA)
+    gf.savePickes(path,'\\deconvolvedTrialData_infocus',trialData)
+    gf.savePickes(path,'\\deconvolvedBackgroundData_infocus',backgroundData)
+    gf.savePickes(path,'\\deconvolvedDarkData_infocus',decStackDark)
+    gf.savePickes(path,'\\deconvolvedDarkTrialData_infocus',darkTrialData)
             
     return trialData, varImage, backgroundData, darkTrialData
