@@ -60,7 +60,8 @@ def getBaseLineIdx(stim):
         return 13
     elif stim == 'R Stim':
         return 80
-
+    elif stim == 'O Stim':
+        return 6
 
 
 def getStimArtefacts(darkTrial, stimIndices):
@@ -76,16 +77,16 @@ def getStimArtefacts(darkTrial, stimIndices):
 
 
 
-def processRawTrace(trialData, darkTrial, backgroundTrace, stim):
+def processRawTrace(trialData, darkTrialData, backgroundData, stim):
     # Calculate the baseline Fluorescence at the beginning of each trace. 
     # Important: this doesn't take in to account photobleaching of the dye. 
     # The first xx frames are before any photostim
     baselineIdx = getBaseLineIdx(stim)
     baselineFluorescence = np.mean(trialData[0:baselineIdx])
-    baselineBackgroundFluorescence = np.mean(backgroundTrace[0:baselineIdx])
-    
+    baselineBackgroundFluorescence = np.mean(backgroundData[0:baselineIdx])
+
     # calculate the average number of counts for the dark trial. This is to get the f_dark value for the dF/F calculation
-    darkTrialAverage = np.mean(darkTrial)
+    darkTrialAverage = np.mean(darkTrialData)
     
     # Initialise the container for the processed traces
     processedTrace = []
@@ -97,7 +98,7 @@ def processRawTrace(trialData, darkTrial, backgroundTrace, stim):
         processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
         
     # now calc (f-f0)/(f0-fdark) for background trace    
-    for element in backgroundTrace:
+    for element in backgroundData:
         processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
         
     diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
@@ -144,17 +145,18 @@ def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):
     baseline_photons = baseline*100*2**16/30000
     baselineNoise = np.sqrt(np.var(trialData[0:baselineIdx]))
     
-    maxValue = max(trialData[12:30])
-    peakIdx = np.array(np.where(trialData == maxValue))
-    peakSignal = np.mean(trialData[peakIdx[0,0]-2:peakIdx[0,0]+2])
-    
-    #maxValue = max(trialData[12:30])
-    #peakIdx = trialData.index(maxValue)
-    #peakSignal = np.mean(trialData[peakIdx-2:peakIdx+2])
+    try:
+        maxValue = max(trialData)
+        peakIdx = np.array(np.where(trialData == maxValue))
+        peakSignal = np.mean(trialData[peakIdx[0,0]-2:peakIdx[0,0]+2])
+        peak_dF_F = (processedTrace[peakIdx[0,0]])*100
+    except:
+        maxValue = max(trialData)
+        peakIdx = trialData.index(maxValue)
+        peakSignal = np.mean(trialData[peakIdx-2:peakIdx+2])
+        peak_dF_F = (processedTrace[peakIdx])*100 #in %
+        
     peakSignal_photons = peakSignal*100*2**16/30000
-    
-    peak_dF_F = (processedTrace[peakIdx[0,0]])*100 #in %
-    #peak_dF_F = (processedTrace[peakIdx])*100 #in %
     
     df_noise = (np.sqrt(np.var(processedTrace[0:baselineIdx])))*100 # in %
     

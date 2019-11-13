@@ -6,6 +6,7 @@ Created on Fri Jul 26 13:44:02 2019
 """
 
 import os
+import tifffile
 import sys
 sys.path.insert(1, r'\\icnas4.cc.ic.ac.uk\chowe7\GitHub\lightfield_HPC_processing')
 import deconvolve as de
@@ -14,7 +15,7 @@ import time
 sys.path.insert(1, r'H:\Python_Scripts\carmel_functions')
 import general_functions as gf
 
-def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
+def getDeconvolution(stack,r,center,num_iterations,path,pathDarkTrial,fileNameDark):
 
     sum_ = np.sum(stack[0,:,:])
     
@@ -26,7 +27,6 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
     df_path = r'H:\Python_Scripts\FireflyLightfield\PSF\correct_prop_550\sim_df.xlsx'
     
     H = de.load_H_part(df_path,folder_to_data,zmax = 50.5*10**-6,zmin = -50.5*10**-6,zstep = 5)
-    num_iterations=2
     
     #multiple images
     decStack = []
@@ -36,7 +36,7 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
         print('Stack loaded...', ii)    
         rectified = de.rectify_image(lightfield_image,r,center,new_center,Nnum)
         start_guess = de.backward_project3(rectified/sum_,H,locs)
-        result_is = de.ISRA(start_guess,rectified/sum_,H,num_iterations,locs)
+        result_is = de.RL_deconv(start_guess,rectified/sum_,H,num_iterations,locs)
         print('Deconvolved.')
         decStack.append(result_is[10,:,:])
         end =time.time()
@@ -46,41 +46,48 @@ def getDeconvolution(stack,stackDark,r,center,path,signalPixels):
         
     #find signal pixels average
     decStackA=np.array(decStack)    
-    varImage = np.var(decStackA,axis=-0)
-   # signalPixels = need to load from refocus for some reason....    
+    varImage = np.var(decStackA,axis=0)
+   # signalPixels = need to load from refocus for some reason....   
+    signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.92)))
     trialData = np.average(decStackA[:,signalPixels[0],signalPixels[1]], axis=1)    
-    
-    #trialData = np.average(decStackA[:,52:55,46:53], axis=1)   
+  
+    #trialData = np.average(decStackA[:,52:54,46:48], axis=1)   
     #trialData = np.average(trialData,axis=1)    
 
     #background average
     backgroundData=np.average(decStackA[:,10:30,10:30],axis=1)
     backgroundData=np.average(backgroundData,axis=1)
     
-        
-    # Dark trial  
-    decStackDark = []
-    for ii in range(len(stackDark)):
-        im = stackDark[ii,...]
-        print('Stack loaded...', ii)    
-        rectified = de.rectify_image(im,r,center,new_center,Nnum)
-        start_guess = de.backward_project3(rectified/sum_,H,locs)
-        result_is = de.ISRA(start_guess,rectified/sum_,H,num_iterations,locs)
-        print('Deconvolved.')
-        decStackDark.append(result_is[10,:,:])
-        
-                   
-    darkTrialData=[]   
-    for jj in range(len(decStackDark)):
-        x=decStackDark[jj]
-        d=np.average(x[10:40,10:20])
-        darkTrialData.append(d)    
-        
     #save
     gf.savePickes(path,'\\deconvolvedStack_infocus',decStackA)
     gf.savePickes(path,'\\deconvolvedTrialData_infocus',trialData)
-    gf.savePickes(path,'\\deconvolvedBackgroundData_infocus',backgroundData)
-    gf.savePickes(path,'\\deconvolvedDarkData_infocus',decStackDark)
-    gf.savePickes(path,'\\deconvolvedDarkTrialData_infocus',darkTrialData)
+    gf.savePickes(path,'\\deconvolvedBackgroundData_infocus',backgroundData)    
+    
+    try:
+         darkTrialData = gf.loadPickles(pathDarkTrial,'\\deconvolvedDarkTrialData_infocus')
+         print('Loaded dark trial data')
+    except:
+        stackDark = tifffile.imread(pathDarkTrial + fileNameDark + '.tif')   
+        print('Loaded dark stack')
+        # Dark trial  
+        decStackDark = []
+        for ii in range(len(stackDark)):
+            im = stackDark[ii,...]
+            print('Stack loaded...', ii)    
+            rectified = de.rectify_image(im,r,center,new_center,Nnum)
+            start_guess = de.backward_project3(rectified/sum_,H,locs)
+            result_is = de.RL_deconv(start_guess,rectified/sum_,H,num_iterations,locs)
+            print('Deconvolved.')
+            decStackDark.append(result_is[10,:,:])
+            
+        darkTrialData=[]   
+        for jj in range(len(decStackDark)):
+            x=decStackDark[jj]
+            d=np.average(x[10:40,10:20])
+            darkTrialData.append(d)    
+        gf.savePickes(pathDarkTrial,'\\deconvolvedDarkData_infocus',decStackDark)
+        gf.savePickes(pathDarkTrial,'\\deconvolvedDarkTrialData_infocus',darkTrialData)   
+
+
             
     return trialData, varImage, backgroundData, darkTrialData
