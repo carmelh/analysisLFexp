@@ -12,55 +12,40 @@ import sys
 import pandas as pd
 sys.path.insert(1, r'H:\Python_Scripts\analysisLFexp')
 import imagingAnalysis as ia
-import idx_refocus as ref
-import deconvolveLF as dlf
+import idx_refocus_new as ref
+import deconvolveLF_new as dlf
 sys.path.insert(1, r'H:\Python_Scripts\carmel_functions')
 import general_functions as gf
 
 ###############################################
 ################### INPUTS  ###################
 ###############################################
-date = '190730'
-what = 'Intra'
-cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1' + '\\' +what +'\\' + date
-currentFile = 'z_stack\MLA_NOPIP_1x1_f_2-8_660nm_200mA_1'
+date = '210325'
+cwd = r'Y:\projects\thefarm2\live\Firefly\NIR-GECO_imaging' + '\\' + date
+currentFile = 's1a1_LF_1P_1x1_50mA_100msExp_stack_5um_1'
 num_iterations=3
-#fileNameDark = r'\MLA2_1x1_50ms_150pA_A-STIM_DARK_1\MLA2_1x1_50ms_150pA_A-STIM_DARK_1_MMStack_Pos0.ome.tif'
 
 ###############################################
 ################### setup ###################
 ###############################################
 
-data_summary = pd.ExcelFile(cwd+r'\result_summary_{}.xlsx'.format(date))
-df = data_summary.parse('Sheet1')    
+df = pd.read_csv(cwd+r'\results_summary_{}.csv'.format(date),index_col=1)
 
-sliceNo = r'\slice{}'.format(df.at[currentFile, 'slice'])
-cellNo = r'\cell{}'.format(df.at[currentFile, 'cell'])
-
-stim = df.at[currentFile, 'Stim Prot']
-ts=df.at[currentFile, 'Exp Time']
+ts=df.at[currentFile, 'timePeriod (s)']
 fs=1/ts 
 
 fileName = r'\{}_MMStack_Pos0.ome.tif'.format(currentFile)
 trialFolder = r'\{}'.format(currentFile)
-path = cwd + sliceNo + cellNo + trialFolder
-pathDarkTrial = cwd + sliceNo + cellNo + r'\{}'.format(df.at[currentFile, 'Dark folder'])
-fileNameDark = r'\{}'.format(df.at[currentFile, 'Dark file'])
+path = df.at[currentFile, 'main folder'] + trialFolder
 
+depths = np.arange(-40,40,1)
 
-trialData=gf.loadPickles(path,'\\refocussedTrialData_infocus')
-
-backgroundData=gf.loadPickles(path,'\\refocussedBackgroundData_infocus')
-
-darkTrialData=gf.loadPickles(pathDarkTrial,'\\deconvolvedDarkTrialData_infocus')
-
-
-depths = np.arange(-40,41,1)
+baselineIdx=13
 
 ###############################################
 ################### refocus ###################
 ###############################################
-if df.at[currentFile, 'Imaging'] == 'MLA':
+if df.at[currentFile, 'WF/LF'] == 'LF':
     r,center = (np.array([df.at[currentFile, 'Rdy'],df.at[currentFile, 'Rdx']]),np.array([df.at[currentFile, 'y'],df.at[currentFile, 'x']])) 
 
     stack = tifffile.imread(path + fileName)
@@ -68,8 +53,10 @@ if df.at[currentFile, 'Imaging'] == 'MLA':
     print('stacks loaded')
     
     keyword='refocused'
+    refoc_mean_stack=ref.main(stack,r,center,depths,path)
+    darkTrial=90
     
-    trialData, varImage, backgroundData, darkTrialData, signalPixels = ref.main(stack,r,center,path,pathDarkTrial,fileNameDark)
+    delta_f = ia.to_df(refoc_mean_stack,darkTrial,baselineIdx)
     
     # process trace
     processedTrace, diffROI,processedBackgroundTrace,baselineIdx = ia.processRawTrace(trialData, darkTrialData, backgroundData, stim)
@@ -93,8 +80,10 @@ if df.at[currentFile, 'Imaging'] == 'MLA':
     ##################################################
     print('Starting Deconvolution')
     keyword = 'deconvolved'
+    darkTrial=0
+    decon_mean_stack = dlf.getDeconvolution(stack,r,center,num_iterations,depths,path)
     
-    trialData, varImage, backgroundData, darkTrialData = dlf.getDeconvolution(stack,r,center,num_iterations,signalPixels,path,pathDarkTrial,fileNameDark,signalPixels)
+    
     
     # process trace
     processedTrace, diffROI,processedBackgroundTrace,baselineIdx = ia.processRawTrace(trialData, darkTrialData, backgroundData, stim)
@@ -111,10 +100,15 @@ if df.at[currentFile, 'Imaging'] == 'MLA':
     
     df.at[currentFile, 'Decon'] = 1
 
-elif df.at[currentFile, 'Imaging'] == 'WF':
-    x,trialData = gf.importCSV(path,'\{}_MMStack_Pos0.ome'.format(currentFile))
-    x,backgroundData = gf.importCSV(path,'\{}_MMStack_Pos0.ome_BG'.format(currentFile))
-    x,darkTrialData = gf.importCSV(pathDarkTrial,fileNameDark)
+elif df.at[currentFile, 'WF/LF'] == 'WF':
+    stack = tifffile.imread(path + fileName)
+    print('stacks loaded')
+    
+    keyword='widefield'
+    
+#    x,trialData = gf.importCSV(path,'\{}_MMStack_Pos0.ome'.format(currentFile))
+#    x,backgroundData = gf.importCSV(path,'\{}_MMStack_Pos0.ome_BG'.format(currentFile))
+#    x,darkTrialData = gf.importCSV(pathDarkTrial,fileNameDark)
     
     # process trace
     processedTrace, diffROI,processedBackgroundTrace,baselineIdx = ia.processRawTrace(trialData, darkTrialData, backgroundData, stim)

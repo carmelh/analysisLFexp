@@ -15,7 +15,7 @@ import time
 sys.path.insert(1, r'H:\Python_Scripts\carmel_functions')
 import general_functions as gf
 
-def getDeconvolution(stack,r,center,num_iterations,path,pathDarkTrial,fileNameDark):
+def getDeconvolution(stack,r,center,num_iterations,signalPixels,path,pathDarkTrial,fileNameDark):
 
     sum_ = np.sum(stack[0,:,:])
     
@@ -26,19 +26,23 @@ def getDeconvolution(stack,r,center,num_iterations,path,pathDarkTrial,fileNameDa
     folder_to_data = 'H:/Python_Scripts/FireflyLightfield/PSF/correct_prop_550/'
     df_path = r'H:\Python_Scripts\FireflyLightfield\PSF\correct_prop_550\sim_df.xlsx'
     
-    H = de.load_H_part(df_path,folder_to_data,zmax = 50.5*10**-6,zmin = -50.5*10**-6,zstep = 5)
+    H = de.load_H_part(df_path,folder_to_data,zmax = 40.5*10**-6,zmin = -40.5*10**-6,zstep =1)
     
     #multiple images
     decStack = []
+    depths = np.arange(-40.5,40.5,1)
+    decon_mean_stack=np.zeros((len(stack),len(depths),101,101))
     for ii in range(len(stack)):
         start=time.time()
         lightfield_image = stack[ii,...]
         print('Stack loaded...', ii)    
         rectified = de.rectify_image(lightfield_image,r,center,new_center,Nnum)
         start_guess = de.backward_project3(rectified/sum_,H,locs)
-        result_is = de.RL_deconv(start_guess,rectified/sum_,H,num_iterations,locs)
+        result_rl = de.RL_deconv(start_guess,rectified/sum_,H,num_iterations,locs)
         print('Deconvolved.')
-        decStack.append(result_is[10,:,:])
+        decon_mean_stack[ii] = result_rl
+#        np.save(path + r'\\stack_refoc\\deconvolved\\' + 'decon_mean_stack_RL_it-{}-{}.npy'.format(num_iterations,ii),result_rl)
+#        decStack.append(result_rl[round(len(result_rl)/2),:,:])
         end =time.time()
         elapsedTime = end-start
         print('elapsed time = {}'.format(elapsedTime))
@@ -47,8 +51,8 @@ def getDeconvolution(stack,r,center,num_iterations,path,pathDarkTrial,fileNameDa
     #find signal pixels average
     decStackA=np.array(decStack)    
     varImage = np.var(decStackA,axis=0)
-   # signalPixels = need to load from refocus for some reason....   
-    signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.92)))
+   # signalPixels = load from refocus   
+#    signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.92)))
     trialData = np.average(decStackA[:,signalPixels[0],signalPixels[1]], axis=1)    
   
     #trialData = np.average(decStackA[:,52:54,46:48], axis=1)   
@@ -59,12 +63,12 @@ def getDeconvolution(stack,r,center,num_iterations,path,pathDarkTrial,fileNameDa
     backgroundData=np.average(backgroundData,axis=1)
     
     #save
-    gf.savePickes(path,'\\deconvolvedStack_infocus',decStackA)
-    gf.savePickes(path,'\\deconvolvedTrialData_infocus',trialData)
-    gf.savePickes(path,'\\deconvolvedBackgroundData_infocus',backgroundData)    
+    gf.savePickes(path,'\\deconvolvedStack_RL_infocus_{}'.format(num_iterations),decStackA)
+    gf.savePickes(path,'\\deconvolvedTrialData_RL_infocus_{}'.format(num_iterations),trialData)
+    gf.savePickes(path,'\\deconvolvedBackgroundData_RL_infocus_{}'.format(num_iterations),backgroundData)    
     
     try:
-         darkTrialData = gf.loadPickles(pathDarkTrial,'\\deconvolvedDarkTrialData_infocus')
+         darkTrialData = gf.loadPickles(pathDarkTrial,'\\deconvolvedDarkTrialData_RL_infocus_{}'.format(num_iterations))
          print('Loaded dark trial data')
     except:
         stackDark = tifffile.imread(pathDarkTrial + fileNameDark + '.tif')   
@@ -85,8 +89,8 @@ def getDeconvolution(stack,r,center,num_iterations,path,pathDarkTrial,fileNameDa
             x=decStackDark[jj]
             d=np.average(x[10:40,10:20])
             darkTrialData.append(d)    
-        gf.savePickes(pathDarkTrial,'\\deconvolvedDarkData_infocus',decStackDark)
-        gf.savePickes(pathDarkTrial,'\\deconvolvedDarkTrialData_infocus',darkTrialData)   
+        gf.savePickes(pathDarkTrial,'\\deconvolvedDarkData_RL_infocus_{}'.format(num_iterations),decStackDark)
+        gf.savePickes(pathDarkTrial,'\\deconvolvedDarkTrialData_RL_infocus_{}'.format(num_iterations),darkTrialData)   
 
 
             

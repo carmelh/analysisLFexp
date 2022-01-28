@@ -15,43 +15,6 @@ import pandas as pd
 import csv
 import os
 
-# This code was designed to read in the data seleceted for stats analyis.
-# we want to report the average and range of: dF/F, SNR, baseline
-# we want these to be in counts.
-
-
-# This section creates the relevent LED-on markers to plot on the data
-# Imaging at 100Hz 
-stimIndices_0_5Hz = [89,289,489]
-stimIndices_1_0Hz = [89,189,289]
-stimIndices_2_0Hz = [89,139,189]
-stimIndices_5_0Hz = [89,109,129]
-stimIndices_10_0Hz = [89,99,109]
-stimIndices_15_0Hz = [89,96,103]
-stimIndices_20_0Hz = [89,94,99]
-
-#------------------------------#
-#          Functions           #
-#------------------------------#
-
-
-def getStimIndices(stimFrequency):
-    if stimFrequency[0] == 0.5:
-        return stimIndices_0_5Hz
-    elif stimFrequency[0] == 1.0:
-        return stimIndices_1_0Hz
-    elif stimFrequency[0] == 2.0:
-        return stimIndices_2_0Hz
-    elif stimFrequency[0] == 5.0:
-        return stimIndices_5_0Hz
-    elif stimFrequency[0] == 10.0:
-        return stimIndices_10_0Hz
-    elif stimFrequency[0] == 15.0:
-        return stimIndices_15_0Hz
-    elif stimFrequency[0] == 20.0:
-        return stimIndices_20_0Hz
-    
-    
 
 def getBaseLineIdx(stim):
     if stim == 'A Stim':
@@ -59,106 +22,43 @@ def getBaseLineIdx(stim):
     elif stim == 'M Stim':
         return 13
     elif stim == 'R Stim':
-        return 80
+        return 30
     elif stim == 'O Stim':
         return 6
 
 
-def getStimArtefacts(darkTrial, stimIndices):
-    # This looks at the max value of when the stim is on +/- 1 frame, and uses this to minus off the real data
-
-    artefactMagnitude = []
-    
-    for index in stimIndices:
-        peakValue = max(darkTrial[index-1:index+1])
-        artefactMagnitude.append(peakValue-np.mean(darkTrial))
-    
-    return artefactMagnitude
-
-
-
-def processRawTrace(trialData, darkTrialData, backgroundData, stim):
-    # Calculate the baseline Fluorescence at the beginning of each trace. 
-    # Important: this doesn't take in to account photobleaching of the dye. 
-    # The first xx frames are before any photostim
+def to_df(trace,darkTrial,stim):
     baselineIdx = getBaseLineIdx(stim)
-    baselineFluorescence = np.mean(trialData[0:baselineIdx])
-    baselineBackgroundFluorescence = np.mean(backgroundData[0:baselineIdx])
-
-    # calculate the average number of counts for the dark trial. This is to get the f_dark value for the dF/F calculation
-    darkTrialAverage = np.mean(darkTrialData)
-    
-    # Initialise the container for the processed traces
-    processedTrace = []
-    processedBackgroundTrace = []
-    diff = []
-    
-    # now calc (f-f0)/(f0-fdark)      
-    for element in trialData:
-        processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
-        
-    # now calc (f-f0)/(f0-fdark) for background trace    
-    for element in backgroundData:
-        processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
-        
-    diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
-    
-    return processedTrace, diff, processedBackgroundTrace, baselineIdx
-
- 
-
-def processRawTraceStimArtefacts(trialData, trialArtefacts, stimIndices, darkTrial, backgroundTrace, baselineIdx):
-    # Calculate the baseline Fluorescence at the beginning of each trace. 
-    # Important: this doesn't take in to account photobleaching of the dye. 
-    # The first xx frames are before any photostim
-    
-    baselineFluorescence = np.mean(trialData[0:baselineIdx])
-    baselineBackgroundFluorescence = np.mean(backgroundTrace[0:baselineIdx])
-    
-    # calculate the average number of counts for the dark trial. This is to get the f_dark value for the dF/F calculation
     darkTrialAverage = np.mean(darkTrial)
     
-    # The following loop removes the stimulation artefacts
-    for index, artefact in enumerate(trialArtefacts):
-        trialData[int(stimIndices[index])] = trialData[int(stimIndices[index])]- artefact  
-    
-    # Initialise the container for the processed traces
-    processedTrace = []
-    processedBackgroundTrace = []
-    diff = []
-    
-    # now calc (f-f0)/(f0-fdark)    
-    for element in trialData:
-        processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
-        
-    # now calc (f-f0)/(f0-fdark) for background trace   
-    for element in backgroundTrace:
-        processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
-        
-    diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
-    
-    return processedTrace, trialData, diff, processedBackgroundTrace, baselineIdx
+    back=np.mean(trace[:baselineIdx,...],0)
+    df=100*(trace-back[None,...]) / (back[None,...] - darkTrialAverage)
+    return df
+
 
     
-def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):    
-    baseline = np.mean(trialData[0:baselineIdx])
+def getStatistics(peakIdx,processedTrace,trialData,darkTrialData,baselineIdx):    
+    start=0
+    baseline = np.mean(trialData[start:baselineIdx])
     baseline_photons = baseline*100*2**16/30000
-    baselineNoise = np.sqrt(np.var(trialData[0:baselineIdx]))
+    baselineNoise = np.sqrt(np.var(trialData[start:baselineIdx]))
     
     try:
         maxValue = max(trialData)
-        peakIdx = np.array(np.where(trialData == maxValue))
+#        peakIdx = np.array(np.where(trialData == maxValue))
+#        peakIdx =143
         peakSignal = np.mean(trialData[peakIdx[0,0]-2:peakIdx[0,0]+2])
-        peak_dF_F = (processedTrace[peakIdx[0,0]])*100
+        peak_dF_F = (processedTrace[peakIdx[0,0]])
     except:
         maxValue = max(trialData)
-        peakIdx = trialData.index(maxValue)
+#        peakIdx = trialData.index(maxValue)
+#        peakIdx=143
         peakSignal = np.mean(trialData[peakIdx-2:peakIdx+2])
-        peak_dF_F = (processedTrace[peakIdx])*100 #in %
+        peak_dF_F = (processedTrace[peakIdx])
         
     peakSignal_photons = peakSignal*100*2**16/30000
     
-    df_noise = (np.sqrt(np.var(processedTrace[0:baselineIdx])))*100 # in %
+    df_noise = (np.sqrt(np.var(processedTrace[start:baselineIdx])))
     
     SNR = (peak_dF_F)/df_noise
     
@@ -175,4 +75,76 @@ def getStatistics(processedTrace,trialData,darkTrialData,baselineIdx):
    
     
 
-    
+
+
+#def getStimIndices(stimFrequency):
+#    if stimFrequency[0] == 0.5:
+#        return stimIndices_0_5Hz
+#    elif stimFrequency[0] == 1.0:
+#        return stimIndices_1_0Hz
+#    elif stimFrequency[0] == 2.0:
+#        return stimIndices_2_0Hz
+#    elif stimFrequency[0] == 5.0:
+#        return stimIndices_5_0Hz
+#    elif stimFrequency[0] == 10.0:
+#        return stimIndices_10_0Hz
+#    elif stimFrequency[0] == 15.0:
+#        return stimIndices_15_0Hz
+#    elif stimFrequency[0] == 20.0:
+#        return stimIndices_20_0Hz
+##    
+#    
+#
+#    def processRawTraceStimArtefacts(trialData, trialArtefacts, stimIndices, darkTrial, backgroundTrace, baselineIdx):
+#    # Calculate the baseline Fluorescence at the beginning of each trace. 
+#    # Important: this doesn't take in to account photobleaching of the dye. 
+#    # The first xx frames are before any photostim
+#    
+#    baselineFluorescence = np.mean(trialData[0:baselineIdx])
+#    baselineBackgroundFluorescence = np.mean(backgroundTrace[0:baselineIdx])
+#    
+#    # calculate the average number of counts for the dark trial. This is to get the f_dark value for the dF/F calculation
+#    darkTrialAverage = np.mean(darkTrial)
+#    
+#
+#    # The following loop removes the stimulation artefacts
+#    for index, artefact in enumerate(trialArtefacts):
+#        trialData[int(stimIndices[index])] = trialData[int(stimIndices[index])]- artefact  
+#    
+#    # Initialise the container for the processed traces
+#    processedTrace = []
+#    processedBackgroundTrace = []
+#    diff = []
+#    
+#    # now calc (f-f0)/(f0-fdark)    
+#    for element in trialData:
+#        processedTrace.append((element-baselineFluorescence)/(baselineFluorescence-darkTrialAverage))
+#        
+#    # now calc (f-f0)/(f0-fdark) for background trace   
+#    for element in backgroundTrace:
+#        processedBackgroundTrace.append((element-baselineBackgroundFluorescence)/(baselineBackgroundFluorescence-darkTrialAverage))
+#        
+#    diff =  np.array(processedTrace) - np.array(processedBackgroundTrace) # change to processedTrace to get stats for diff
+#    
+#    return processedTrace, trialData, diff, processedBackgroundTrace, baselineIdx
+
+# This section creates the relevent LED-on markers to plot on the data
+## Imaging at 100Hz 
+#stimIndices_0_5Hz = [89,289,489]
+#stimIndices_1_0Hz = [89,189,289]
+#stimIndices_2_0Hz = [89,139,189]
+#stimIndices_5_0Hz = [89,109,129]
+#stimIndices_10_0Hz = [89,99,109]
+#stimIndices_15_0Hz = [89,96,103]
+#stimIndices_20_0Hz = [89,94,99]
+#    
+#def getStimArtefacts(darkTrial, stimIndices):
+#    # This looks at the max value of when the stim is on +/- 1 frame, and uses this to minus off the real data
+#
+#    artefactMagnitude = []
+#    
+#    for index in stimIndices:
+#        peakValue = max(darkTrial[index-1:index+1])
+#        artefactMagnitude.append(peakValue-np.mean(darkTrial))
+#    
+#    return artefactMagnitude

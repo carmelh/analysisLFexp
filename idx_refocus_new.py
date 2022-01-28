@@ -197,121 +197,22 @@ def get_stack_refocussed(stack,r,center,depths,n_views = 21,rad_spots = 45,hw_di
         un_idx,un_weight = get_shift_idx_cent(views_idx,views_weight,uu,vv,alpha,scale,grid2)
         full_idx,full_weight = get_all_shift(un_idx,un_weight,grid,r,d)
         result[idx,:,:,:]= get_refoc_stack(stack,full_idx,full_weight)
-#        print('Time: %d mins'%((time.time()-t0)/60))
-#        print('%d%% complete'%((idx+1)*100/m))
+        print('Time: %d mins'%((time.time()-t0)/60))
+        print('%d%% complete'%((idx+1)*100/m))
         
     return result
 
 
-def main(stack,r,center,path,pathDarkTrial,fileNameDark):
-    depths = np.arange(-20,20,2)
+def main(stack,r,center,depths,path):
     refoc_mean_stack=np.zeros((len(stack),len(depths),101,101))
-    reFstack = []
     for ii in range(len(stack)):
-        start=time.time()
         im = stack[ii,...] 
         print('Stack loaded...',ii)    
         result = get_refocussed(im,r,center,depths,n_views = 19)
-        print('Refocussed.')
+        print('Refocused.')
         refoc_mean_stack[ii] = result
-        end =time.time()
-        elapsedTime = end-start
-        print('elapsed time = {}'.format(elapsedTime))
-#        reFstack.append(result[round(len(result)/2),:,:])
        # pg.image(result)
         
-    # auto find pixels containing signal    
-    reFstackA=np.array(reFstack)
-    varImage = np.var(reFstackA,axis=-0)
-    signalPixels= np.array(np.where(varImage > np.percentile(varImage,99.92)))
-    trialData = np.average(reFstackA[:,signalPixels[0],signalPixels[1]], axis=1)    
+    np.save(path + r'\\stack_refoc\\' + 'refoc_mean_stack.npy',refoc_mean_stack)
     
-    #average background    
-    backgroundData=np.average(reFstackA[:,10:30,10:30],axis=1)
-    backgroundData=np.average(backgroundData,axis=1)
-    
-    #save
-    np.save(path + r'\\stack_refoc\\refocused\\' + 'refoc_mean_stack.npy',refoc_mean_stack)
-    gf.savePickes(path,'\\refstack_infocus',reFstackA)       
-    gf.savePickes(path,'\\refocussedTrialData_infocus',trialData)    
-    gf.savePickes(path,'\\refocussedBackgroundData_infocus',backgroundData)            
-    
-    
-    #darkstack        
-    try:
-         darkTrialData = gf.loadPickles(pathDarkTrial,'\\refDarkTrialData_infocus')
-         print('Loaded dark trial data')
-
-    except:
-        stackDark = tifffile.imread(pathDarkTrial + fileNameDark + '.tif')   
-        print('Loaded dark stack')
-
-        reStackDark = []
-        for ii in range(len(stackDark)):
-            im = stackDark[ii,...] 
-            print('Stack loaded...',ii)    
-            result = get_refocussed(im,r,center,np.arange(-10,10,1),n_views = 19)
-            print('Refocussed.')
-            reStackDark.append(result[10,:,:])
-        
-        darkTrialData=[]
-        for jj in range(len(reStackDark)):
-            x=reStackDark[jj]
-            d=np.average(x[60:63,42:44])
-            darkTrialData.append(d)
-        gf.savePickes(pathDarkTrial,'\\darkRefStack_infocus',reStackDark)
-        gf.savePickes(pathDarkTrial,'\\refDarkTrialData_infocus',darkTrialData)
-       
-    return trialData, varImage, backgroundData, darkTrialData, signalPixels
-
-
-#def test():
-#    r,center = (np.array([0.87,19.505]),np.array([1024.3,1015.4])) 
-#
-#    cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190724'
-#    sliceNo = r'\slice1'
-#    cellNo = r'\cell1'
-#    fileName = r'\MLA3_1x1_50ms_150pA_A-STIM_1\MLA3_1x1_50ms_150pA_A-STIM_1_MMStack_Pos0.ome.tif'
-#    fileNameDark = r'\MLA2_1x1_50ms_150pA_A-STIM_DARK_1\MLA2_1x1_50ms_150pA_A-STIM_DARK_1_MMStack_Pos0.ome.tif'
-#    
-#    Stim = 'A Stim'
-#
-##    cwd = r'Y:\projects\thefarm2\live\Firefly\Lightfield\Calcium\CaSiR-1\Intra\190724\slice1\cell1'
-# #   stack = tifffile.imread(cwd + r'\MLA3_1x1_50ms_150pA_A-STIM_1\MLA3_1x1_50ms_150pA_A-STIM_1_MMStack_Pos0.ome.tif')
-#    
-#    reFstack = []
-#    for ii in range(len(stack)):
-#        im = stack[ii,...] 
-#        print('Stack loaded...',ii)    
-#        result = get_refocussed(im,r,center,np.arange(-10,10,1),n_views = 19)
-#        print('Refocussed.')
-#        reFstack.append(result[10,:,:])
-#        #pg.image(result)
-#      
-#    # auto find pixels containing signal    
-#    reFstackA=np.array(reFstack)
-#    varImage = np.var(reFstackA,axis=-0)
-#    plt.imshow(varImage)
-#    signalPixels = np.array(np.where(varImage > np.percentile(varImage,99.92)))
-#    trialData = np.average(reFstackA[:,signalPixels[0],signalPixels[1]], axis=1)    
-#       
-#    backgroundData=np.average(reFstackA[:,10:30,10:30],axis=1)
-#    backgroundData=np.average(backgroundData,axis=1)
-#
-#        
-#    #darkstack        
-#    reStackDark = []
-#    for ii in range(len(stackDark)):
-#        im = stackDark[ii,...] 
-#        print('Stack loaded...',ii)    
-#        result = get_refocussed(im,r,center,np.arange(-10,10,1),n_views = 19)
-#        print('Refocussed.')
-#        reStackDark.append(result[10,:,:])
-#        
-#    darkTrialData=[]
-#    for jj in range(len(reStackDark)):
-#        x=reStackDark[jj]
-#        d=np.average(x[60:63,42:44])
-#        darkTrialData.append(d)
-        
-    
+    return refoc_mean_stack
