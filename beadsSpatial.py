@@ -478,16 +478,22 @@ plt.savefig(figureFolder + r'\\sumAllPixels_550-660_cm-tab10.eps', format='eps',
 # Lateral normalised
 normMaxRefLat=[float(i)/np.max(xy_refoc) for i in xy_refoc]
 
+
 normMaxDec660Lat=np.zeros((8,101))
 for ii in range(len(xy_dec)):
     normMaxDec660Lat[ii]=[float(i)/np.max(xy_dec[ii]) for i in xy_dec[ii]]
+
+test=np.transpose(yx_dec,[0,2,1])
+normMaxDec660Lat=np.zeros((8,101))
+for ii in range(len(yx_dec)):
+    normMaxDec660Lat[ii]=[float(i)/np.max(test[ii]) for i in test[ii]]
     
 
 
 fig = plt.gcf()    
 ax = fig.add_subplot(111)
 for col,ii in zip(color_idx, range(len(all_decon_660))):
-    lines=plt.plot(xLat-414,normMaxDec660Lat[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
+    lines=plt.plot(xLat-302,normMaxDec660Lat[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
 plt.plot(xLat-368.5,normMaxRefLat,linewidth=2.5,color='k',linestyle='--')
 #plt.legend(['1', '3', '5', '7', '9', '13', '17', '21'],frameon=False,ncol=1)  
 plt.xlim([-20,20])
@@ -527,7 +533,7 @@ fig = plt.gcf()
 ax = fig.add_subplot(111)
 for col,ii in zip(color_idx, range(len(all_decon_660))):
     lines=plt.plot(depths_dec+3,normMaxDec660[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
-plt.plot(depths_ref+2,normMaxRef,linewidth=2.5,color='k',linestyle='--')
+plt.plot(depths_ref[18:60]+2,normMaxRef,linewidth=2.5,color='k',linestyle='--')
 #plt.legend(['1', '3', '5', '7', '9', '13', '17', '21'],frameon=False,ncol=1)  
 plt.xlim([-20,20])
 ax.spines['right'].set_visible(False)
@@ -546,10 +552,10 @@ plt.savefig(figureFolder + r'\\sumAllPixelsNorm_660-refoc_cm-tab10.eps', format=
 fig = plt.gcf()    
 ax = fig.add_subplot(211)
 for col,ii in zip(color_idx, range(len(all_decon_660))):
-    lines=plt.plot(xLat,normMaxDec660Lat[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
-plt.plot(xLat,normMaxRefLat,linewidth=2.5,color='k',linestyle='--')
+    lines=plt.plot(xLat-414,normMaxDec660Lat[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
+plt.plot(xLat-368.5,normMaxRefLat,linewidth=2.5,color='k',linestyle='--')
 #plt.legend(['1', '3', '5', '7', '9', '13', '17', '21'],frameon=False,ncol=1)  
-plt.xlim([320,360])
+plt.xlim([-20,20])
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.spines['bottom'].set_linewidth(2)
@@ -558,7 +564,7 @@ ax.axes.get_yaxis().set_ticks([])
 
 ax = fig.add_subplot(212)
 for col,ii in zip(color_idx, range(len(all_decon_660))):
-    lines=plt.plot(depths_dec+2,normMaxDec660[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
+    lines=plt.plot(depths_dec+3,normMaxDec660[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
 plt.plot(depths_ref[18:60]+2,normMaxRef,linewidth=2.5,color='k',linestyle='--')
 #plt.legend(['1', '3', '5', '7', '9', '13', '17', '21'],frameon=False,ncol=1)  
 plt.xlim([-20,20])
@@ -613,5 +619,147 @@ plt.tight_layout()
 
 plt.savefig(figureFolder + r'\\lateralAxialNorm_660-refoc_cm-tab10.png', format='png', dpi=600, bbox_inches='tight')
 plt.savefig(figureFolder + r'\\lateralAxialNorm_660-refoc_cm-tab10.eps', format='eps', dpi=600, bbox_inches='tight')
+
+
+
+# WIDEFIELD
+inFocus_wf=131
+x_wf=1127
+y_wf=1880
+
+
+xy_wf=wfStack[inFocus_wf,:,x_wf:x_wf+1]
+yx_wf=wfStack[inFocus_wf,y_wf:y_wf+1,:]
+
+xz_wf=wfStack[:,:,x_wf]
+yz_wf=wfStack[:,y_wf,:]
+
+
+conversion=2048/101
+
+xS_wf=172
+yS_wf=218
+
+#5*conversion):round(17*conversion)
+#round(4*conversion):round(16*conversion)
+FOV_wf=round(12*conversion)
+
+fig = plt.gcf()      
+ax = plt.subplot(111)  
+plt.imshow(wfStack[inFocus_wf,round(y_wf-(FOV_wf/2)):round(y_wf+(FOV_wf/2)),round(x_wf-(FOV_wf/2)):round(x_wf+(FOV_wf/2))])
+plt.plot([xS_wf,xS_wf+(lengthSB/0.26)],[yS_wf,yS_wf],linewidth=6.0,color='w')
+
+#axis formatting
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_linewidth(False)
+ax.spines['left'].set_linewidth(False)
+ax.axes.get_yaxis().set_ticks([])
+ax.axes.get_xaxis().set_ticks([]) 
+pf.forceAspect(ax,aspect=1)
+plt.tight_layout()  
+plt.savefig(figureFolder + r'\\FOV_wf_{}umSB.png'.format(lengthSB), format='png', dpi=600, bbox_inches='tight')
+plt.savefig(figureFolder + r'\\FOV_wf_{}umSB.eps'.format(lengthSB), format='eps', dpi=800, bbox_inches='tight')
+
+
+
+fig = plt.gcf()      
+ax = plt.subplot(111)  
+plt.imshow(wfStack[inFocus_wf-20:inFocus_wf+20,round(y_wf-(FOV_wf/2)):round(y_wf+(FOV_wf/2)),x_wf])
+
+#axis formatting
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_linewidth(False)
+ax.spines['left'].set_linewidth(False)
+#ax.axes.get_yaxis().set_ticks([])
+ax.axes.get_xaxis().set_ticks([]) 
+plt.tight_layout()  
+plt.savefig(figureFolder + r'\\xz_wf_40um.png', format='png', dpi=600, bbox_inches='tight')
+plt.savefig(figureFolder + r'\\xz_wf_40um.eps', format='eps', dpi=800, bbox_inches='tight')
+
+
+fig = plt.gcf()      
+ax = plt.subplot(111)  
+plt.imshow(wfStack[inFocus_wf-20:inFocus_wf+20,y_wf,round(x_wf-(FOV_wf/2)):round(x_wf+(FOV_wf/2))])
+
+#axis formatting
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_linewidth(False)
+ax.spines['left'].set_linewidth(False)
+#ax.axes.get_yaxis().set_ticks([])
+ax.axes.get_xaxis().set_ticks([]) 
+plt.tight_layout()  
+plt.savefig(figureFolder + r'\\yz_wf_40um.png', format='png', dpi=600, bbox_inches='tight')
+plt.savefig(figureFolder + r'\\yz_wf_40um.eps', format='eps', dpi=800, bbox_inches='tight')
+
+
+
+
+norm_wfLat=[float(i)/np.max(wf_xProf[:,1]) for i in wf_xProf[:,1]]
+norm_wfLat_y=[float(i)/np.max(wf_yProf[:,1]) for i in wf_yProf[:,1]]
+
+
+wf_zProf_ROI=wf_zProf[wfProf_zCent-23:wfProf_zCent+17,1]
+norm_wfAx=[float(i)/np.max(wf_zProf_ROI) for i in wf_zProf_ROI]
+
+#alternate norm
+norm_wfAx=(wf_zProf_ROI - np.min(wf_zProf_ROI))/(np.max(wf_zProf_ROI) - np.min(wf_zProf_ROI))
+
+norm_decon_1iter=(normMaxDec660[0,17:63] - np.min(normMaxDec660[0,17:63]))/(np.max(normMaxDec660[0,17:63]) - np.min(normMaxDec660[0,17:63]))
+
+
+wfProf_xCent=207
+wfProf_zCent=130
+
+
+plt.plot(xLat_wf,norm_wfLat[wfProf_xCent-77:wfProf_xCent+77])
+plt.plot(norm_wfLat_y)
+
+
+
+xLat_wf=np.arange(-20,20,0.26)
+xAx_wf=np.arange(-20,20,1)
+
+# widefield refocused decon
+fig = plt.gcf()    
+ax = fig.add_subplot(211)
+plt.plot(xLat_wf,norm_wfLat[wfProf_xCent-78:wfProf_xCent+76],color='#551a8b',linewidth=2.5,linestyle=':')
+for col,ii in zip(color_idx, range(len(all_decon_660))):
+    lines=plt.plot(xLat-414,normMaxDec660Lat[ii,:],linewidth=2.5, color=plt.cm.tab10(col))
+plt.plot(xLat-368.5,normMaxRefLat,linewidth=2.5,color='k',linestyle='--')
+#plt.legend(['1', '3', '5', '7', '9', '13', '17', '21'],frameon=False,ncol=1)  
+plt.xlim([-20,20])
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_linewidth(2)
+ax.spines['left'].set_linewidth(False)
+ax.axes.get_yaxis().set_ticks([])
+
+ax = fig.add_subplot(212)
+plt.plot(xAx_wf,norm_wfAx,color='#551a8b',linewidth=2.5,linestyle=':')
+plt.plot(depths_dec[20:66],norm_decon_1iter,linewidth=2.5)         
+for col,ii in zip(color_idx[1:9], range(7)):
+    lines=plt.plot(depths_dec+3,normMaxDec660[ii+1,:],linewidth=2.5, color=plt.cm.tab10(col))
+plt.plot(depths_ref[18:60]+2,normMaxRef,linewidth=2.5,color='k',linestyle='--')
+#plt.legend(['1', '3', '5', '7', '9', '13', '17', '21'],frameon=False,ncol=1)  
+plt.xlim([-20,20])
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_linewidth(2)
+ax.spines['left'].set_linewidth(False)
+ax.axes.get_yaxis().set_ticks([])
+#fig.set_size_inches(7.5,7.5)
+plt.tight_layout()  
+
+fig.set_size_inches(6.5,6.5)
+plt.tight_layout()  
+
+plt.savefig(figureFolder + r'\\lateralAxialNorm_wf_660-refoc_cm-tab10.png', format='png', dpi=600, bbox_inches='tight')
+plt.savefig(figureFolder + r'\\lateralAxialNorm_wf_660-refoc_cm-tab10.eps', format='eps', dpi=600, bbox_inches='tight')
+
+
+
 
 
