@@ -11,6 +11,8 @@ import deconvolve as de
 import numpy as np
 import time
 
+num_iterations=3
+
 def getDeconvolution(stack,r,center,num_iterations,depths,path):
     sum_ = np.sum(stack[0,:,:])
     
@@ -18,8 +20,8 @@ def getDeconvolution(stack,r,center,num_iterations,depths,path):
     new_center = (1023,1023)
     locs = de.get_locs(new_center,Nnum)
     
-    folder_to_data = 'C:\Users\howeca/Dropbox/Imperial/OneDrive/python_code/Imperial/FireflyLightfield/PSF/correct_prop_550/'
-    df_path = r'H:\Python_Scripts\FireflyLightfield\PSF\correct_prop_550\sim_df.xlsx'
+    folder_to_data = 'C:/Users/howeca/Dropbox/Imperial/OneDrive/python_code/Imperial/FireflyLightfield/PSF/correct_prop_550/'
+    df_path = 'C:/Users/howeca/Dropbox/Imperial/OneDrive/python_code/Imperial/FireflyLightfield/PSF/correct_prop_550/sim_df.xlsx'
     
     H = de.load_H_part(df_path,folder_to_data,zmax = 20.5*10**-6,zmin = -20.5*10**-6,zstep =2)
     
@@ -29,7 +31,7 @@ def getDeconvolution(stack,r,center,num_iterations,depths,path):
         lightfield_image = stack[ii,...]
         print('Stack loaded...', ii)    
         rectified = de.rectify_image(lightfield_image,r,center,new_center,Nnum)
-        start_guess = de.backward_project(rectified/sum_,H,locs)
+        start_guess = de.backward_project3(rectified/sum_,H,locs)
         result_rl = de.RL_deconv(start_guess,rectified/sum_,H,num_iterations,locs)
         print('Deconvolved.')
         decon_mean_stack[ii] = result_rl
@@ -37,5 +39,5 @@ def getDeconvolution(stack,r,center,num_iterations,depths,path):
         elapsedTime = end-start
         print('elapsed time = {}'.format(elapsedTime))
         
-    np.save(path + r'\\stack_refoc\\deconvolved\\' + 'decon_mean_stack_RL_it-{}.npy'.format(num_iterations),result_rl)     
+    np.save(path + r'\\stack_refoc\\deconvolved\\' + 'decon_mean_stack_RL_it-{}.npy'.format(num_iterations),decon_mean_stack)     
     return decon_mean_stack
